@@ -75,15 +75,19 @@ export async function GET() {
 export async function POST(request: Request) {
   if (!isAdmin(request)) return NextResponse.json({ error: "Admin authentication required." }, { status: 401 });
   try {
-    const formData = await request.formData();
-    const file = formData.get("file");
-    const title = text(formData.get("title"));
-    const excerpt = text(formData.get("excerpt"));
-    const category = text(formData.get("category")) || "Inspiration";
-    if (!(file instanceof File)) return NextResponse.json({ error: "A file is required." }, { status: 400 });
+    const contentType = request.headers.get("content-type") || "";
+    const data = contentType.includes("application/json") ? await request.json() as Record<string, string> : Object.fromEntries(await request.formData());
+    const file = data.file instanceof File ? data.file : null;
+    const title = text(data.title || null);
+    const excerpt = text(data.excerpt || null);
+    const category = text(data.category || null) || "Inspiration";
+    const mediaPath = text(data.mediaPath || null);
+    const mediaType = data.mediaType === "video" ? "video" as const : "image" as const;
+    const filename = text(data.filename || null);
+    if (!file && !mediaPath) return NextResponse.json({ error: "A file is required." }, { status: 400 });
     if (!title || !excerpt) return NextResponse.json({ error: "Title and description are required." }, { status: 400 });
-    const media = await saveMedia(file);
-    const post: SavedPost = { id: randomUUID(), title, excerpt, category, ...media, filename: file.name, date: new Date().toISOString() };
+    const media = file ? await saveMedia(file) : { media: `/api/media/${mediaPath}`, mediaPath, mediaType };
+    const post: SavedPost = { id: randomUUID(), title, excerpt, category, ...media, filename: file?.name || filename, date: new Date().toISOString() };
     await writePosts([post, ...(await readPosts())]);
     return NextResponse.json({ post }, { status: 201 });
   } catch (error) {
@@ -94,18 +98,23 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   if (!isAdmin(request)) return NextResponse.json({ error: "Admin authentication required." }, { status: 401 });
   try {
-    const formData = await request.formData();
-    const id = text(formData.get("id"));
-    const title = text(formData.get("title"));
-    const excerpt = text(formData.get("excerpt"));
-    const category = text(formData.get("category")) || "Inspiration";
-    const file = formData.get("file");
+    const contentType = request.headers.get("content-type") || "";
+    const data = contentType.includes("application/json") ? await request.json() as Record<string, string> : Object.fromEntries(await request.formData());
+    const id = text(data.id || null);
+    const title = text(data.title || null);
+    const excerpt = text(data.excerpt || null);
+    const category = text(data.category || null) || "Inspiration";
+    const file = data.file instanceof File ? data.file : null;
     const posts = await readPosts();
     const index = posts.findIndex((post) => post.id === id);
     if (index === -1) return NextResponse.json({ error: "Post not found." }, { status: 404 });
     if (!title || !excerpt) return NextResponse.json({ error: "Title and description are required." }, { status: 400 });
     const updated = { ...posts[index], title, excerpt, category };
-    if (file instanceof File && file.size > 0) {
+    const directMediaPath = text(data.mediaPath || null);
+    if (directMediaPath) {
+      await removeMedia(updated.mediaPath, updated.media);
+      Object.assign(updated, { media: `/api/media/${directMediaPath}`, mediaPath: directMediaPath, mediaType: data.mediaType === "video" ? "video" as const : "image" as const, filename: text(data.filename || null) });
+    } else if (file && file.size > 0) {
       const media = await saveMedia(file);
       await removeMedia(updated.mediaPath, updated.media);
       Object.assign(updated, media, { filename: file.name });

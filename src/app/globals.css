@@ -141,6 +141,13 @@ img { max-width:100%; }
 .admin-post-copy h3 { font-family:var(--font-display),Georgia,serif; font-size:25px; line-height:1; margin:12px 0 10px; }
 .admin-post-copy > p:last-child { color:var(--muted); font-size:13px; line-height:1.6; margin:0; }
 .admin-form-actions,.admin-post-actions { align-items:center; display:flex; flex-wrap:wrap; gap:12px; }
+.file-summary { align-items:center; background:var(--white); border:1px solid var(--line); display:flex; font-size:12px; justify-content:space-between; padding:13px 15px; }
+.file-summary span { color:var(--muted); }
+.upload-progress { background:var(--white); border:1px solid var(--line); display:grid; gap:12px; padding:16px; }
+.upload-progress-label { align-items:center; display:flex; font-size:12px; justify-content:space-between; }
+.upload-progress-label strong { color:var(--red); font-size:14px; }
+.upload-progress-track { background:rgba(7,27,73,.1); height:8px; overflow:hidden; }
+.upload-progress-track span { background:var(--red); display:block; height:100%; transition:width .2s ease; }
 .admin-post-actions { margin-top:18px; }
 .admin-post-actions .btn-secondary,.admin-post-actions .btn-danger { font-size:10px; padding:10px 13px; }
 .btn-danger { background:transparent; border:1px solid var(--red); color:var(--red); cursor:pointer; font-size:11px; font-weight:700; letter-spacing:.12em; padding:13px 17px; text-transform:uppercase; }
