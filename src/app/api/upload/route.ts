@@ -47,7 +47,7 @@ async function saveMedia(file: File) {
   if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) throw new Error("Only image and video files are supported.");
   const extension = path.extname(file.name).toLowerCase() || (file.type.startsWith("video/") ? ".mp4" : ".jpg");
   const mediaPath = `media/${randomUUID()}${extension}`;
-  await put(mediaPath, file, { access: "private", contentType: file.type, token: token() });
+  await put(mediaPath, file, { access: "private", contentType: file.type, multipart: file.type.startsWith("video/"), token: token() });
   return { media: `/api/media/${mediaPath}`, mediaPath, mediaType: file.type.startsWith("video/") ? "video" as const : "image" as const };
 }
 

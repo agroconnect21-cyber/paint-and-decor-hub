@@ -44,7 +44,7 @@ export default function Admin() {
     const data = new FormData(); data.set("title", form.title); data.set("excerpt", form.excerpt); data.set("category", form.category); if (editingId) data.set("id", editingId); if (form.file) data.set("file", form.file);
     const response = await fetch("/api/upload", { method: editingId ? "PATCH" : "POST", body: data }); const result = await response.json(); setBusy(false);
     if (!response.ok) { setStatus(result.error || "The post could not be saved."); return; }
-    setPosts((current) => editingId ? current.map((post) => post.id === editingId ? result.post : post) : [result.post, ...current]); setStatus(editingId ? "Changes saved." : "Published successfully."); setEditingId(null); setForm(emptyForm); event.currentTarget.reset();
+    setPosts((current) => editingId ? current.map((post) => post.id === editingId ? result.post : post) : [result.post, ...current]); setStatus(editingId ? "Changes saved." : "Published successfully. The form is ready for the next post."); event.currentTarget.reset(); setEditingId(null); setForm({ ...emptyForm });
   }
 
   async function removePost(id: string) {
