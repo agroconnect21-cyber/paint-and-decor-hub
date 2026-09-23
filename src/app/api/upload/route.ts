@@ -36,7 +36,7 @@ async function readPosts(): Promise<SavedPost[]> {
 }
 
 async function writePosts(posts: SavedPost[]) {
-  await put(manifestPath, JSON.stringify(posts, null, 2), { access: "private", addRandomSuffix: false, contentType: "application/json", token: token() });
+  await put(manifestPath, JSON.stringify(posts, null, 2), { access: "private", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", token: token() });
 }
 
 function text(value: FormDataEntryValue | null) {
