@@ -31,6 +31,7 @@ export default function Admin() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     if (!form.file) { setStatus("Choose an image or video first."); return; }
     setBusy(true); setProgress(0); setStatus("Preparing secure upload...");
     const controller = new AbortController(); abortRef.current = controller;
@@ -44,7 +45,7 @@ export default function Admin() {
       if (!response.ok) throw new Error(result.error || "The post could not be saved.");
       setPosts((current) => editingId ? current.map((post) => post.id === editingId ? result.post : post) : [result.post, ...current]);
       setStatus(editingId ? "Changes saved. The form is ready for the next post." : "Published successfully. The form is ready for the next post.");
-      event.currentTarget.reset(); setEditingId(null); setForm({ ...emptyForm }); setProgress(100);
+      formElement.reset(); setEditingId(null); setForm({ ...emptyForm }); setProgress(100);
     } catch (error) {
       setStatus(error instanceof Error && error.name === "AbortError" ? "Upload cancelled." : error instanceof Error ? error.message : "Upload failed.");
     } finally { setBusy(false); abortRef.current = null; }
