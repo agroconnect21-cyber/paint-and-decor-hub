@@ -1,4 +1,4 @@
-import { del, list, put } from "@vercel/blob";
+import { del, get, list, put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { NextResponse } from "next/server";
@@ -14,6 +14,7 @@ type SavedPost = {
   excerpt: string;
   category: string;
   media: string;
+  mediaPath: string;
   mediaType: "image" | "video";
   filename: string;
   date: string;
@@ -26,16 +27,16 @@ function token() {
 }
 
 async function readPosts(): Promise<SavedPost[]> {
-  const result = await list({ prefix: manifestPath, token: token() });
-  const manifest = result.blobs.find((blob) => blob.pathname === manifestPath);
+  const listResult = await list({ prefix: manifestPath, token: token() });
+  const manifest = listResult.blobs.find((blob) => blob.pathname === manifestPath);
   if (!manifest) return [];
-  const response = await fetch(manifest.url, { cache: "no-store" });
-  if (!response.ok) throw new Error("Could not read the content manifest.");
-  return await response.json() as SavedPost[];
+  const blobResult = await get(manifestPath, { access: "private", token: token() });
+  if (!blobResult || blobResult.statusCode !== 200) return [];
+  return await new Response(blobResult.stream).json() as SavedPost[];
 }
 
 async function writePosts(posts: SavedPost[]) {
-  await put(manifestPath, JSON.stringify(posts, null, 2), { access: "public", addRandomSuffix: false, contentType: "application/json", token: token() });
+  await put(manifestPath, JSON.stringify(posts, null, 2), { access: "private", addRandomSuffix: false, contentType: "application/json", token: token() });
 }
 
 function text(value: FormDataEntryValue | null) {
@@ -45,12 +46,13 @@ function text(value: FormDataEntryValue | null) {
 async function saveMedia(file: File) {
   if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) throw new Error("Only image and video files are supported.");
   const extension = path.extname(file.name).toLowerCase() || (file.type.startsWith("video/") ? ".mp4" : ".jpg");
-  const blob = await put(`media/${randomUUID()}${extension}`, file, { access: "public", contentType: file.type, token: token() });
-  return { media: blob.url, mediaType: file.type.startsWith("video/") ? "video" as const : "image" as const };
+  const mediaPath = `media/${randomUUID()}${extension}`;
+  await put(mediaPath, file, { access: "private", contentType: file.type, token: token() });
+  return { media: `/api/media/${mediaPath}`, mediaPath, mediaType: file.type.startsWith("video/") ? "video" as const : "image" as const };
 }
 
-async function removeMedia(media: string) {
-  if (media.startsWith("https://")) await del(media, { token: token() });
+async function removeMedia(media: string, fallbackUrl?: string) {
+  if (media || fallbackUrl) await del(media || fallbackUrl!, { token: token() });
 }
 
 function storageError(error: unknown) {
@@ -105,7 +107,7 @@ export async function PATCH(request: Request) {
     const updated = { ...posts[index], title, excerpt, category };
     if (file instanceof File && file.size > 0) {
       const media = await saveMedia(file);
-      await removeMedia(updated.media);
+      await removeMedia(updated.mediaPath, updated.media);
       Object.assign(updated, media, { filename: file.name });
     }
     posts[index] = updated;
@@ -123,7 +125,7 @@ export async function DELETE(request: Request) {
     const posts = await readPosts();
     const post = posts.find((item) => item.id === id);
     if (!post) return NextResponse.json({ error: "Post not found." }, { status: 404 });
-    await removeMedia(post.media);
+    await removeMedia(post.mediaPath, post.media);
     await writePosts(posts.filter((item) => item.id !== id));
     return NextResponse.json({ deleted: true });
   } catch (error) {
